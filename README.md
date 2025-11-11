@@ -39,16 +39,16 @@ bun install
 
 ### 2. Configure Environment
 
-The `.env.local` file is already configured with your credentials:
+Create a `.env.local` file in the root directory with your Vapi credentials:
 
 ```env
-VAPI_PRIVATE_KEY=90de59da-fccc-47c1-91ff-f7fc8ce5b016
-VAPI_PHONE_NUMBER_ID=6627f74b-5892-4a05-bde7-49e79b9f464f
-VAPI_DEFAULT_ASSISTANT_ID=9fb6d4c5-9403-49ea-afeb-9b493d63b474
-VAPI_FROM_PHONE=08071387149
+VAPI_PRIVATE_KEY=your-vapi-private-key-here
+VAPI_PHONE_NUMBER_ID=your-phone-number-id-here
+VAPI_DEFAULT_ASSISTANT_ID=your-default-assistant-id-here
+VAPI_FROM_PHONE=your-phone-number-here
 ```
 
-**Important:** Never commit `.env.local` to git!
+**Important:** Never commit `.env.local` to git! This file is already in `.gitignore`.
 
 ### 3. Run Development Server
 
@@ -66,7 +66,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. Select an AI assistant from the dropdown
 2. Enter a phone number in the "Single Phone Number" field
-   - Format: `+919148227303` or `09148227303`
+   - Format: `+919XXXXXXXXX` or `09XXXXXXXXX`
 3. Click "Make Call(s)"
 
 ### Making Bulk Calls
@@ -76,9 +76,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - **One number per line**
    - Example:
      ```
-     +919148227303
-     +919876543210
-     +918071387149
+     +919XXXXXXXXX
+     +919XXXXXXXXX
+     +918XXXXXXXXX
      ```
 3. Adjust the delay slider (1-5 seconds between calls)
 4. Click "Make Call(s)"
@@ -137,10 +137,10 @@ Fetches all available Vapi assistants.
   "success": true,
   "assistants": [
     {
-      "id": "9fb6d4c5-9403-49ea-afeb-9b493d63b474",
-      "name": "New Assistant",
+      "id": "assistant-id-here",
+      "name": "Assistant Name",
       "model": { "model": "gpt-4.1-nano" },
-      "voice": { "voiceId": "8N2ng9i2uiUWqstgmWlH" }
+      "voice": { "voiceId": "voice-id-here" }
     }
   ],
   "count": 2
@@ -154,8 +154,8 @@ Makes calls to multiple phone numbers recursively.
 **Request:**
 ```json
 {
-  "assistantId": "9fb6d4c5-9403-49ea-afeb-9b493d63b474",
-  "phoneNumbers": ["+919148227303", "+919876543210"],
+  "assistantId": "your-assistant-id",
+  "phoneNumbers": ["+919XXXXXXXXX", "+919XXXXXXXXX"],
   "delay": 2000
 }
 ```
@@ -166,8 +166,8 @@ Makes calls to multiple phone numbers recursively.
   "success": true,
   "results": [
     {
-      "number": "+919148227303",
-      "callId": "019a70e9-7686-7aae-a75a-16791d94cada",
+      "number": "+919XXXXXXXXX",
+      "callId": "call-id-here",
       "status": "queued",
       "timestamp": "2025-11-11T03:15:39.782Z"
     }
@@ -233,7 +233,7 @@ VAPI_DEFAULT_ASSISTANT_ID=your-assistant-id-here
 
 ### Calls Not Connecting
 
-- Verify phone numbers are in correct format (+919148227303 or 09148227303)
+- Verify phone numbers are in correct format (+919XXXXXXXXX or 09XXXXXXXXX)
 - Check Vobiz account has sufficient balance
 - Ensure `VAPI_PHONE_NUMBER_ID` is correct
 
