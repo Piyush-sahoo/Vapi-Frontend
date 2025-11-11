@@ -6,27 +6,37 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Function to make a single call to Vapi
+// Function to make a single call to Vapi (immediate or scheduled)
 async function makeSingleCall(
   assistantId: string,
   phoneNumber: string,
-  phoneNumberId: string
+  phoneNumberId: string,
+  scheduledAt?: string // ISO 8601 timestamp in UTC (optional)
 ): Promise<CallResult> {
   try {
+    const requestBody: any = {
+      assistantId,
+      customer: {
+        number: phoneNumber,
+        numberE164CheckEnabled: false,
+      },
+      phoneNumberId,
+    };
+
+    // Add schedulePlan if scheduledAt is provided
+    if (scheduledAt) {
+      requestBody.schedulePlan = {
+        earliestAt: scheduledAt,
+      };
+    }
+
     const response = await fetch('https://api.vapi.ai/call/phone', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.VAPI_PRIVATE_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        assistantId,
-        customer: {
-          number: phoneNumber,
-          numberE164CheckEnabled: false,
-        },
-        phoneNumberId,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -41,6 +51,7 @@ async function makeSingleCall(
       callId: data.id,
       status: data.status as any,
       timestamp: new Date().toISOString(),
+      scheduledAt: data.schedulePlan?.earliestAt,
     };
   } catch (error) {
     return {
@@ -52,11 +63,11 @@ async function makeSingleCall(
   }
 }
 
-// Main POST handler - RECURSIVE CALLING
+// Main POST handler - RECURSIVE CALLING (Immediate or Scheduled)
 export async function POST(request: NextRequest) {
   try {
     const body: MakeCallsRequest = await request.json();
-    const { assistantId, phoneNumbers, delay = 2000 } = body;
+    const { assistantId, phoneNumbers, delay = 2000, scheduleFrom, useScheduling = false } = body;
 
     // Validation
     if (!assistantId || !phoneNumbers || phoneNumbers.length === 0) {
@@ -80,11 +91,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[BULK CALLING] Starting calls for ${phoneNumbers.length} numbers...`);
+    const callType = useScheduling ? 'SCHEDULED CALLS' : 'IMMEDIATE CALLS';
+    console.log(`[${callType}] Starting for ${phoneNumbers.length} numbers...`);
 
     const results: CallResult[] = [];
+    let scheduledCalls = 0;
 
-    // RECURSIVE LOOP - Make calls one by one with delay
+    // Calculate base scheduled time (if scheduling is enabled)
+    let baseScheduleTime = scheduleFrom ? new Date(scheduleFrom) : new Date();
+
+    // RECURSIVE LOOP - Make calls one by one with delay or scheduling
     for (let i = 0; i < phoneNumbers.length; i++) {
       const phoneNumber = phoneNumbers[i].trim();
 
@@ -93,23 +109,40 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      console.log(`[${i + 1}/${phoneNumbers.length}] Calling ${phoneNumber}...`);
+      let scheduledAt: string | undefined;
 
-      // Make the call
-      const result = await makeSingleCall(assistantId, phoneNumber, phoneNumberId);
+      // If scheduling is enabled, calculate schedule time for this call
+      if (useScheduling) {
+        // For bulk calls: schedule with 3-second intervals
+        const scheduleTime = new Date(baseScheduleTime.getTime() + (i * 3000)); // 3 seconds apart
+        scheduledAt = scheduleTime.toISOString();
+        console.log(`[${i + 1}/${phoneNumbers.length}] Scheduling ${phoneNumber} for ${scheduleTime.toLocaleString()}...`);
+      } else {
+        console.log(`[${i + 1}/${phoneNumbers.length}] Calling ${phoneNumber} immediately...`);
+      }
+
+      // Make the call (immediate or scheduled)
+      const result = await makeSingleCall(assistantId, phoneNumber, phoneNumberId, scheduledAt);
       results.push(result);
 
-      console.log(`[${i + 1}/${phoneNumbers.length}] Result:`, result.callId ? `✅ ${result.callId}` : `❌ ${result.error}`);
+      if (result.status === 'scheduled') {
+        scheduledCalls++;
+      }
 
-      // Wait before next call (except for the last one)
-      if (i < phoneNumbers.length - 1) {
+      console.log(
+        `[${i + 1}/${phoneNumbers.length}] Result:`,
+        result.callId ? `✅ ${result.callId} (${result.status})` : `❌ ${result.error}`
+      );
+
+      // For immediate calls, wait before next call (except for the last one)
+      if (!useScheduling && i < phoneNumbers.length - 1) {
         console.log(`[DELAY] Waiting ${delay}ms before next call...`);
         await sleep(delay);
       }
     }
 
     // Calculate statistics
-    const successfulCalls = results.filter(r => r.callId).length;
+    const successfulCalls = results.filter(r => r.callId && !r.error).length;
     const failedCalls = results.filter(r => r.error).length;
 
     const response: MakeCallsResponse = {
@@ -117,9 +150,13 @@ export async function POST(request: NextRequest) {
       totalCalls: results.length,
       successfulCalls,
       failedCalls,
+      scheduledCalls: useScheduling ? scheduledCalls : undefined,
     };
 
-    console.log(`[COMPLETE] Total: ${results.length}, Success: ${successfulCalls}, Failed: ${failedCalls}`);
+    console.log(
+      `[COMPLETE] Total: ${results.length}, Success: ${successfulCalls}, Failed: ${failedCalls}` +
+      (useScheduling ? `, Scheduled: ${scheduledCalls}` : '')
+    );
 
     return NextResponse.json({
       success: true,

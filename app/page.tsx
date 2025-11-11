@@ -44,7 +44,9 @@ export default function Home() {
   const handleMakeCalls = async (
     assistantId: string,
     phoneNumbers: string[],
-    delay: number
+    delay: number,
+    useScheduling: boolean,
+    scheduleFrom?: string
   ) => {
     try {
       setMakingCalls(true);
@@ -60,6 +62,8 @@ export default function Home() {
           assistantId,
           phoneNumbers,
           delay,
+          useScheduling,
+          scheduleFrom,
         }),
       });
 
@@ -155,7 +159,9 @@ export default function Home() {
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Select an AI assistant from the dropdown</li>
                   <li>• Enter one number OR multiple numbers (one per line)</li>
-                  <li>• Calls are made recursively with configurable delay</li>
+                  <li>• Toggle scheduling ON to schedule calls for a specific time</li>
+                  <li>• Bulk calls are scheduled 3 seconds apart automatically</li>
+                  <li>• Immediate calls use configurable delay (1-5 seconds)</li>
                   <li>• Results appear in real-time on the right</li>
                 </ul>
               </div>

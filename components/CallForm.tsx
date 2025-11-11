@@ -5,7 +5,7 @@ import type { VapiAssistant } from '@/types';
 
 interface CallFormProps {
   assistants: VapiAssistant[];
-  onSubmit: (assistantId: string, phoneNumbers: string[], delay: number) => void;
+  onSubmit: (assistantId: string, phoneNumbers: string[], delay: number, useScheduling: boolean, scheduleFrom?: string) => void;
   isLoading: boolean;
 }
 
@@ -14,6 +14,9 @@ export default function CallForm({ assistants, onSubmit, isLoading }: CallFormPr
   const [singleNumber, setSingleNumber] = useState('');
   const [bulkNumbers, setBulkNumbers] = useState('');
   const [delay, setDelay] = useState(2000); // 2 seconds default
+  const [useScheduling, setUseScheduling] = useState(false);
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [scheduleDate, setScheduleDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +48,26 @@ export default function CallForm({ assistants, onSubmit, isLoading }: CallFormPr
       return;
     }
 
-    onSubmit(selectedAssistant, phoneNumbers, delay);
+    // Build schedule timestamp if scheduling is enabled
+    let scheduleFrom: string | undefined;
+    if (useScheduling) {
+      if (!scheduleDate || !scheduleTime) {
+        alert('Please select both date and time for scheduling');
+        return;
+      }
+      // Combine date and time, then convert to UTC ISO string
+      const localDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+      scheduleFrom = localDateTime.toISOString();
+    }
+
+    onSubmit(selectedAssistant, phoneNumbers, delay, useScheduling, scheduleFrom);
   };
 
   const handleClear = () => {
     setSingleNumber('');
     setBulkNumbers('');
+    setScheduleDate('');
+    setScheduleTime('');
   };
 
   return (
@@ -124,30 +141,93 @@ export default function CallForm({ assistants, onSubmit, isLoading }: CallFormPr
         </p>
       </div>
 
-      {/* Delay Slider */}
-      <div>
-        <label htmlFor="delay" className="block text-sm font-medium text-gray-700 mb-2">
-          Delay Between Calls: {delay / 1000}s
-        </label>
-        <input
-          type="range"
-          id="delay"
-          min="1000"
-          max="5000"
-          step="500"
-          value={delay}
-          onChange={(e) => setDelay(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          disabled={isLoading}
-        />
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>1s</span>
-          <span>2s</span>
-          <span>3s</span>
-          <span>4s</span>
-          <span>5s</span>
+      {/* Schedule Toggle */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <label htmlFor="useScheduling" className="text-sm font-medium text-gray-700">
+            Schedule Calls
+          </label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={useScheduling}
+            onClick={() => setUseScheduling(!useScheduling)}
+            disabled={isLoading}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              useScheduling ? 'bg-blue-600' : 'bg-gray-300'
+            } ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                useScheduling ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
+
+        {useScheduling && (
+          <div className="space-y-3 mt-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="scheduleDate" className="block text-xs font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  id="scheduleDate"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label htmlFor="scheduleTime" className="block text-xs font-medium text-gray-700 mb-1">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  id="scheduleTime"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-blue-600">
+              ⏰ Bulk calls will be scheduled 3 seconds apart starting from this time
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Delay Slider (only for immediate calls) */}
+      {!useScheduling && (
+        <div>
+          <label htmlFor="delay" className="block text-sm font-medium text-gray-700 mb-2">
+            Delay Between Calls: {delay / 1000}s
+          </label>
+          <input
+            type="range"
+            id="delay"
+            min="1000"
+            max="5000"
+            step="500"
+            value={delay}
+            onChange={(e) => setDelay(Number(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            disabled={isLoading}
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1s</span>
+            <span>2s</span>
+            <span>3s</span>
+            <span>4s</span>
+            <span>5s</span>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-3">

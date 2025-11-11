@@ -82,12 +82,19 @@ export default function CallResults({ results, totalCalls, successfulCalls, fail
                   <div className="flex items-center gap-2">
                     {result.error ? (
                       <span className="text-red-500 text-xl">❌</span>
+                    ) : result.status === 'scheduled' ? (
+                      <span className="text-blue-500 text-xl">⏰</span>
                     ) : (
                       <span className="text-green-500 text-xl">✅</span>
                     )}
                     <span className="font-mono text-lg font-semibold text-gray-900">
                       {result.number}
                     </span>
+                    {result.status === 'scheduled' && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                        SCHEDULED
+                      </span>
+                    )}
                   </div>
 
                   {result.callId && (
@@ -107,8 +114,18 @@ export default function CallResults({ results, totalCalls, successfulCalls, fail
                       {result.status && (
                         <div className="mt-1">
                           <span className="text-sm text-gray-600">Status:</span>
-                          <span className="ml-2 text-sm font-medium text-gray-900 capitalize">
+                          <span className={`ml-2 text-sm font-medium capitalize ${
+                            result.status === 'scheduled' ? 'text-blue-600' : 'text-gray-900'
+                          }`}>
                             {result.status}
+                          </span>
+                        </div>
+                      )}
+                      {result.scheduledAt && (
+                        <div className="mt-1">
+                          <span className="text-sm text-gray-600">Scheduled For:</span>
+                          <span className="ml-2 text-sm font-medium text-blue-600">
+                            {new Date(result.scheduledAt).toLocaleString()}
                           </span>
                         </div>
                       )}

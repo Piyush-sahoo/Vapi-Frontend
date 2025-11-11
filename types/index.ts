@@ -18,15 +18,22 @@ export interface VapiAssistant {
 export interface CallResult {
   number: string;
   callId?: string;
-  status?: 'queued' | 'ringing' | 'in-progress' | 'forwarding' | 'ended' | 'failed';
+  status?: 'queued' | 'ringing' | 'in-progress' | 'forwarding' | 'ended' | 'failed' | 'scheduled';
   error?: string;
   timestamp: string;
+  scheduledAt?: string; // ISO timestamp when call is scheduled for
+}
+
+export interface SchedulePlan {
+  earliestAt: string; // ISO 8601 timestamp in UTC
 }
 
 export interface MakeCallsRequest {
   assistantId: string;
   phoneNumbers: string[];
-  delay?: number; // milliseconds between calls
+  delay?: number; // milliseconds between calls (for immediate calls)
+  scheduleFrom?: string; // ISO timestamp to start scheduling from (optional)
+  useScheduling?: boolean; // Whether to use scheduling feature
 }
 
 export interface MakeCallsResponse {
@@ -34,6 +41,7 @@ export interface MakeCallsResponse {
   totalCalls: number;
   successfulCalls: number;
   failedCalls: number;
+  scheduledCalls?: number;
 }
 
 export interface VapiCallResponse {
@@ -50,7 +58,8 @@ export interface VapiCallResponse {
     numberE164CheckEnabled: boolean;
   };
   status: string;
-  phoneCallProvider: string;
-  phoneCallProviderId: string;
-  phoneCallTransport: string;
+  phoneCallProvider?: string;
+  phoneCallProviderId?: string;
+  phoneCallTransport?: string;
+  schedulePlan?: SchedulePlan;
 }
